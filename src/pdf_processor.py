@@ -7,7 +7,7 @@ def extract_text_from_pdf(file_path, output_folder):
     os.makedirs(output_folder, exist_ok=True)
     
     # Use pymupdf4llm to convert the PDF to Markdown
-    md_text = pymupdf4llm.to_markdown(file_path)
+    md_text = pymupdf4llm.to_markdown(file_path, )
     
     # Generate output file path using the PDF filename
     pdf_filename = os.path.basename(file_path)
