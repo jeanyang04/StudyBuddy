@@ -50,7 +50,7 @@ def create_rag_chain(vector_store: Chroma, model_name: str = "llama3.1") -> Any:
     retriever = vector_store.as_retriever()
     return create_retrieval_chain(retriever, document_chain)
 
-def main():
+def main(prompt: str):
     # Load documents
     docs = load_pdf_documents("../../test_data/input")
     
@@ -65,10 +65,10 @@ def main():
     
     # Example query
     response = chain.invoke({
-        "input": "What is the machine specs that is used to train the model?"
+        "input": prompt
     })
     
     print(response['answer'])
 
 if __name__ == "__main__":
-    main() 
+    main("What is the machine specs that is used to train the model?")
