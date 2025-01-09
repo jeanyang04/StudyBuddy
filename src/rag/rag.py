@@ -13,10 +13,15 @@ import os
 
 def load_pdf_documents(input_dir: str) -> List:
     """Load PDF documents from the specified directory."""
+    # Get the absolute path to the project root
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(os.path.dirname(current_dir))
+    input_path = os.path.join(project_root, "test_data", "input")
+    
     docs = []
-    for file in os.listdir(input_dir):
+    for file in os.listdir(input_path):
         if file.endswith(".pdf"):
-            loader = PyPDFLoader(os.path.join(input_dir, file))
+            loader = PyPDFLoader(os.path.join(input_path, file))
             docs.extend(loader.load())
     return docs
 
@@ -30,8 +35,20 @@ def create_text_chunks(documents: List, chunk_size: int = 1000, chunk_overlap: i
 
 def setup_vector_store(chunks: List) -> Chroma:
     """Initialize the vector store with document chunks."""
+    # Get path for persistent storage
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(os.path.dirname(current_dir))
+    db_dir = os.path.join(project_root, "chroma_db")
+    
+    # Initialize embeddings
     embeddings = HuggingFaceEmbeddings(model_name='all-MiniLM-L6-v2')
-    return Chroma.from_documents(chunks, embeddings)
+    
+    # Create vector store with persistence
+    return Chroma.from_documents(
+        documents=chunks,
+        embedding=embeddings,
+        persist_directory=db_dir
+    )
 
 def create_rag_chain(vector_store: Chroma, model_name: str = "llama3.1") -> Any:
     """Create the RAG chain with retriever and LLM."""
@@ -52,7 +69,7 @@ def create_rag_chain(vector_store: Chroma, model_name: str = "llama3.1") -> Any:
 
 def askRag(prompt: str):
     # Load documents
-    docs = load_pdf_documents("../../test_data/input")
+    docs = load_pdf_documents("input")
     
     # Create chunks
     chunks = create_text_chunks(docs)
@@ -68,7 +85,7 @@ def askRag(prompt: str):
         "input": prompt
     })
     
-    print(response['answer'])
+    return response['answer']
 
 if __name__ == "__main__":
-    askRag("What is the machine specs that is used to train the model?")
+    print(askRag("What is the machine specs that is used to train the model?"))

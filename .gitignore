@@ -3,4 +3,6 @@ test_data/
 *.pyc
 *.pyo
 *.DS_Store
+
 indexed_data.json
+chroma_db/
