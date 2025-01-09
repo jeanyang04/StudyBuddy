@@ -1,10 +1,13 @@
-import shutil
 import os
+from backend.chromadb import get_chroma_db
 
-def remove_pdf(file_path):
-    target_dir = "../../test_data/input"
-    if os.path.exists(file_path):
-        os.remove(file_path)
-        print(f"PDF removed from {target_dir}")
+def remove_pdf(file_name):
+    target_file = f"pdf_files/{file_name}"
+    if os.path.exists(target_file):
+        os.remove(target_file)
+        # Remove embeddings from Chroma DB
+        db = get_chroma_db()
+        db.delete_collection(file_name)
+        print(f"✅ PDF {file_name} removed.")
     else:
-        print(f"PDF not found in {target_dir}")
+        print(f"❌ PDF {file_name} not found.")
