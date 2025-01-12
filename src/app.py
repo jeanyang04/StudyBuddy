@@ -1,47 +1,64 @@
+import os
 import streamlit as st
-
 from rag.rag import askRag
 
-st.markdown("""
-<style>
-.stTextInput {
-    position: fixed;
-    bottom: 3rem;
-    padding: 1rem;
-    z-index: 100;
-    left: 50%;
-    transform: translateX(-50%);
-}
-</style>
-""", unsafe_allow_html=True)
+height = 600
+icon = ":robot:"
 
-st.title("Study Buddy")
+# Define a callback function to handle the input
+def handle_input(prompt):
+    response = askRag(prompt, path="data/uploaded_files")
 
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    st.session_state.messages.append({"role": "assistant", "content": response})
+
+    for message in st.session_state.messages:
+        messages.chat_message(message["role"]).write(message["content"])
+
+# Initialize session state for messages if it doesn't exist
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Define a callback function to handle the input
-def handle_input():
-    if st.session_state.prompt_input:
-        prompt = st.session_state.prompt_input
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        # Clear the input by setting the value before the next rerun
-        st.session_state.prompt_input = ""
-        response = askRag(prompt)
-        st.session_state.messages.append({"role": "assistant", "content": response})
+if "clicked" not in st.session_state:
+    st.session_state.clicked = False
 
-# Use the on_change parameter to trigger the callback
-prompt = st.text_input(
-    "Enter your prompt",
-    key="prompt_input",
-    autocomplete="off",
-    on_change=handle_input
-)
+st.set_page_config(page_title="Study Buddy", page_icon=icon, layout="wide")  
 
-# Display messages
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
+def toggle_clicked():
+    st.session_state.clicked = not st.session_state.clicked
 
-st.markdown("<div style='margin-bottom:7rem'></div>", unsafe_allow_html=True)
+for file in os.listdir(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "uploaded_files")):
+    os.remove(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "uploaded_files", file))
+
+col1, col2 = st.columns([4, 1], gap="large", vertical_alignment="bottom")
+with col1:
+    st.header("Study Buddy")
+with col2:
+    if st.session_state.clicked:
+        st.button("Close", on_click=toggle_clicked)
+    else:
+        st.button("Upload Files", on_click=toggle_clicked)
+
+if st.session_state.clicked:
+    uploaded_files = st.file_uploader("Upload multiple pdf files", accept_multiple_files=True, type="pdf")
+
+    if uploaded_files:
+        data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "uploaded_files")
+        if not os.path.exists(data_dir):
+            os.makedirs(data_dir)
+        else:
+            for file in os.listdir(data_dir):
+                os.remove(os.path.join(data_dir, file))
+
+    for file in uploaded_files:
+        with open(os.path.join(data_dir, file.name), "wb") as f:
+            f.write(file.getbuffer())
+    file = None
+
+messages = st.container(border=True, height=height)
+
+if prompt:= st.text_input("Enter your prompt", key="prompt_input", autocomplete="off", placeholder="Ask me anything about the files uploaded", ):
+    handle_input(prompt)
+
+
 

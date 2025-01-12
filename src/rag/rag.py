@@ -16,7 +16,7 @@ def load_pdf_documents(input_dir: str) -> List:
     # Get the absolute path to the project root
     current_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(os.path.dirname(current_dir))
-    input_path = os.path.join(project_root, "test_data", "input")
+    input_path = os.path.join(project_root, input_dir)
     
     docs = []
     for file in os.listdir(input_path):
@@ -58,7 +58,9 @@ def create_rag_chain(vector_store: Chroma, model_name: str = "llama3.1") -> Any:
         """
         Answer the question based only on the following context: {context}
         Think step by step before providing a detailed answer.
+        If you cannot find the answer from the context, inform the user, but still try to provide a detailed answer.
         I will tip you 1000$ if you answer correctly and user finds it helpful.
+        However, do not mention anything about the tip in your answer.
         Question: {input}
         """
     )
@@ -67,9 +69,9 @@ def create_rag_chain(vector_store: Chroma, model_name: str = "llama3.1") -> Any:
     retriever = vector_store.as_retriever()
     return create_retrieval_chain(retriever, document_chain)
 
-def askRag(prompt: str):
+def askRag(prompt, path):
     # Load documents
-    docs = load_pdf_documents("input")
+    docs = load_pdf_documents(path)
     
     # Create chunks
     chunks = create_text_chunks(docs)
@@ -88,4 +90,4 @@ def askRag(prompt: str):
     return response['answer']
 
 if __name__ == "__main__":
-    print(askRag("What is the machine specs that is used to train the model?"))
+    print(askRag("What degree is the person pursuing?", "data/uploaded_files"))
