@@ -55,7 +55,16 @@ def setup_vector_store(chunks: List) -> Chroma:
     # Initialize embeddings
     embeddings = HuggingFaceEmbeddings(model_name='all-MiniLM-L6-v2')
     
-    # Create vector store with persistence
+    # Create or get existing database
+    db = Chroma(
+        persist_directory=db_dir,
+        embedding_function=embeddings
+    )
+    
+    # Clear existing collections
+    db.delete_collection()
+    
+    # Create new collection with documents
     return Chroma.from_documents(
         documents=chunks,
         embedding=embeddings,
