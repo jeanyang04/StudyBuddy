@@ -27,8 +27,11 @@ st.set_page_config(page_title="Study Buddy", page_icon=icon, layout="wide")
 def toggle_clicked():
     st.session_state.clicked = not st.session_state.clicked
 
-for file in os.listdir(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "uploaded_files")):
-    os.remove(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "uploaded_files", file))
+if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "uploaded_files")):
+    for file in os.listdir(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "uploaded_files")):
+        os.remove(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "uploaded_files", file))
+else:
+    os.makedirs(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "uploaded_files"))
 
 col1, col2 = st.columns([4, 1], gap="large", vertical_alignment="bottom")
 with col1:
@@ -59,6 +62,3 @@ messages = st.container(border=True, height=height)
 
 if prompt:= st.text_input("Enter your prompt", key="prompt_input", autocomplete="off", placeholder="Ask me anything about the files uploaded", ):
     handle_input(prompt)
-
-
-

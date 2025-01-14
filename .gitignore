@@ -4,6 +4,7 @@ data/
 *.pyc
 *.pyo
 *.DS_Store
+.env
 
 indexed_data.json
 chroma_db/
