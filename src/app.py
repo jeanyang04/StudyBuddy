@@ -1,74 +1,77 @@
-import os
+from pinecone.grpc import PineconeGRPC as Pinecone
+from pinecone import ServerlessSpec
 import streamlit as st
-from rag.rag import askRag
+from langchain_community.document_loaders import PyPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_core.prompts import ChatPromptTemplate
+from openai import OpenAI
+import time
 
-height = 500
-icon = ":robot:"
+PINECONE_API_KEY = st.secrets["PINECONE_API_KEY"]
+OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+API_ADDRESS = "https://api.deepseek.com"
 
-# Define a callback function to handle the input
-def handle_input(prompt):
-    response = askRag(prompt, path="data/uploaded_files")
+embed_model = HuggingFaceEmbeddings(model_name='all-MiniLM-L6-v2')
+pc = Pinecone(api_key=PINECONE_API_KEY)
+llm = OpenAI(OPENAI_API_KEY, API_ADDRESS)
 
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    st.session_state.messages.append({"role": "assistant", "content": response})
+index_name = "studybuddy-embeddings"
 
-    for message in st.session_state.messages:
-        messages.chat_message(message["role"]).write(message["content"])
+if not pc.has_index(index_name):
+    pc.create_index(
+        name=index_name,
+        dimension=384,
+        metric="cosine",
+        spec=ServerlessSpec(
+            cloud='aws', 
+            region='us-east-1'
+        ) 
+    ) 
 
-# Initialize session state for messages if it doesn't exist
+# Wait for the index to be ready
+while not pc.describe_index(index_name).status['ready']:
+    time.sleep(1)
+
+# --- Streamlit App ---
+st.title("Simple RAG Demo")
+
+# Password protection
+password = st.text_input("Enter password:", type="password")
+if password != st.secrets["PASSWORD"]:
+    st.stop()
+
+# Create a session state variable to store the chat messages. This ensures that the
+# messages persist across reruns.
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "clicked" not in st.session_state:
-    st.session_state.clicked = False
+# Display the existing chat messages via `st.chat_message`.
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-st.set_page_config(page_title="Study Buddy", page_icon=icon, layout="wide")  
+# Create a chat input field to allow the user to enter a message. This will display
+# automatically at the bottom of the page.
+if prompt := st.chat_input("What is up?"):
 
-def toggle_clicked():
-    st.session_state.clicked = not st.session_state.clicked
+    # Store and display the current prompt.
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
 
-if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "uploaded_files")):
-    for file in os.listdir(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "uploaded_files")):
-        os.remove(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "uploaded_files", file))
-else:
-    os.makedirs(os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "uploaded_files"))
+    # Generate a response using the OpenAI API.
+    stream = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": m["role"], "content": m["content"]}
+            for m in st.session_state.messages
+        ],
+        stream=True,
+    )
 
-col1, col2 = st.columns([4, 1], gap="large", vertical_alignment="bottom")
-with col1:
-    st.header("Study Buddy")
-with col2:
-    if st.session_state.clicked:
-        st.button("Clear all files", on_click=toggle_clicked)
-    else:
-        st.button("Upload Files", on_click=toggle_clicked)
-
-if st.session_state.clicked:
-    st.session_state.uploaded_files = st.file_uploader("Upload multiple pdf files", accept_multiple_files=True, type="pdf")
-
-    if st.session_state.uploaded_files:
-        data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "uploaded_files")
-        if not os.path.exists(data_dir):
-            os.makedirs(data_dir)
-        else:
-            for file in os.listdir(data_dir):
-                os.remove(os.path.join(data_dir, file))
-
-    for file in st.session_state.uploaded_files:
-        with open(os.path.join(data_dir, file.name), "wb") as f:
-            f.write(file.getbuffer())
-    st.session_state.uploaded_files = None
-
-messages = st.container(border=True, height=height)
-
-# Add this function to check if files exist in the upload directory
-def files_exist_in_upload_dir():
-    upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "uploaded_files")
-    return any(file.endswith('.pdf') for file in os.listdir(upload_dir)) if os.path.exists(upload_dir) else False
-
-if files_exist_in_upload_dir():
-    if prompt := st.text_input("Enter your prompt", key="prompt_input", autocomplete="off", placeholder="Ask me anything about the files uploaded"):
-        handle_input(prompt)
-else:
-    st.session_state.messages = []
-    st.text_input("Enter your prompt", key="prompt_input", disabled=True, placeholder="Please upload PDF files first")
-    st.info("⚠️ Please upload PDF files before asking questions.")
+    # Stream the response to the chat using `st.write_stream`, then store it in 
+    # session state.
+    with st.chat_message("assistant"):
+        response = st.write_stream(stream)
+    st.session_state.messages.append({"role": "assistant", "content": response})
