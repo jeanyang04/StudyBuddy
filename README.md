@@ -2,6 +2,9 @@
 
 StudyBuddy is an interactive web-based application that empowers students and professionals with an AI-powered study assistant. Using Retrieval-Augmented Generation (RAG), it enables users to upload PDFs and engage in meaningful conversations about their content through an intuitive chat interface.
 
+### Demo Video
+(https://drive.google.com/file/d/1sLpCBCNnLj5oE07T2VoUmuLeXNtZIBuR/view)
+
 ## Features
 
 - **Upload Multiple PDFs**: Dynamically add and remove PDF documents
